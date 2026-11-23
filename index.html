@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digitrack 96 — Boom-Bap Edition</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#c0c0c0" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app" class="win95-panel window">
+      <div class="titlebar"><span id="title">Digitrack 96 — Boom-Bap Edition</span><button id="btn-help" class="win95-button tb-btn" title="Help (F1)">?</button></div>
+
+      <div class="toolbar">
+        <button id="btn-new" class="win95-button" title="Start a new, empty project">New…</button>
+        <button id="btn-open" class="win95-button" title="Open project (Ctrl/Cmd+O)">Open…</button>
+        <button id="btn-save" class="win95-button" title="Save project (Ctrl/Cmd+S)">Save…</button>
+        <input id="proj" type="file" accept=".smp" hidden />
+        <span class="sep"></span>
+        <button id="btn-load" class="win95-button">Import Audio…</button>
+        <button id="btn-rec" class="win95-button" title="Record from a microphone or audio interface input">Record…</button>
+        <button id="btn-bounce" class="win95-button" title="Render the whole timeline to a 16-bit WAV file">Export Audio…</button>
+        <input id="file" type="file" accept="audio/*,.wav,.mp3" multiple hidden />
+        <span class="sep"></span>
+        <button id="btn-rew" class="win95-button" title="Rewind (Home)">|◀</button>
+        <button id="btn-play" class="win95-button" title="Play / Stop (Space)">▶ Play</button>
+        <button id="btn-optimize" class="win95-button" title="Merge duplicate samples and crop unused audio to free RAM">Optimize…</button>
+        <span class="sep"></span>
+        <button id="btn-undo" class="win95-button" title="Undo (Ctrl/Cmd+Z)">Undo</button>
+        <button id="btn-redo" class="win95-button" title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+        <span class="sep"></span>
+        <button id="btn-split" class="win95-button" title="Split at playhead (S)">Split</button>
+        <button id="btn-dup" class="win95-button" title="Duplicate after selected (D)">Double</button>
+        <button id="btn-del" class="win95-button" title="Delete (Del)">Delete</button>
+        <span class="sep"></span>
+        <button id="btn-snap" class="win95-button on" title="Snap to object edges, playhead and 0 (hold Alt to bypass)">Snap</button>
+        <button id="btn-zout" class="win95-button">Zoom −</button>
+        <button id="btn-zin" class="win95-button">Zoom +</button>
+        <span class="sep"></span>
+        <fieldset class="master" title="Master glue: simple but aggressive glueing compressor on the final mix (also in Export Audio)">
+          <legend>Master</legend>
+          <button id="m-on" class="win95-button">Glue</button>
+          <label>Comp <input id="m-comp" type="range" min="0" max="100" value="40" /></label>
+          <label>Mix <input id="m-mix" type="range" min="0" max="100" value="100" /></label>
+        </fieldset>
+        <span class="spacer"></span>
+        <div class="win95-inset led-box"><canvas id="led" width="196" height="46"></canvas></div>
+        <div class="ram">
+          <div id="ram-label">RAM Used: 0.0 MB / 64.0 MB</div>
+          <div class="win95-inset ram-bar" id="ram-bar"></div>
+        </div>
+      </div>
+
+      <div id="main">
+        <div id="headers"><div class="ruler-spacer"></div></div>
+        <div id="canvas-col">
+          <div id="canvas-wrap"><canvas id="timeline"></canvas></div>
+          <div id="hscroll" class="win95-inset" title="Scroll timeline"><div id="hscroll-inner"></div></div>
+        </div>
+      </div>
+
+      <div class="objpanel" id="objpanel">
+        <fieldset>
+          <legend>Object</legend>
+          <span id="o-name">— nothing selected —</span>
+        </fieldset>
+        <fieldset>
+          <legend>Pitch</legend>
+          <input id="o-pitch" type="range" min="-1200" max="1200" step="1" value="0" />
+          <span id="o-pitch-val" class="val">0 c</span>
+          <button id="o-pitch-reset" class="win95-button small">0</button>
+        </fieldset>
+        <fieldset>
+          <legend>Pan</legend>
+          <input id="o-pan" type="range" min="-100" max="100" step="1" value="0" />
+          <span id="o-pan-val" class="val">C</span>
+          <button id="o-pan-reset" class="win95-button small">C</button>
+        </fieldset>
+        <fieldset>
+          <legend>Resampling</legend>
+          <button id="o-dirty" class="win95-button">Dirty (Nearest)</button>
+          <button id="o-clean" class="win95-button">Clean (Linear)</button>
+        </fieldset>
+        <fieldset>
+          <legend>Identical</legend>
+          <button id="o-ident" class="win95-button" title="Select all exact copies of the selected object(s) (I)">Select Identical</button>
+        </fieldset>
+        <fieldset>
+          <legend>Playback</legend>
+          <button id="o-rev" class="win95-button">◀ Reverse</button>
+          <button id="o-swap" class="win95-button" title="Swap left and right channels">⇄ Swap L/R</button>
+          <button id="o-mute" class="win95-button" title="Mute object (M)">Mute</button>
+          <button id="o-export" class="win95-button" title="Download the selected object(s) as 16-bit WAV, exactly as shown. The project is not changed.">Export Object WAV</button>
+          <button id="o-freeze" class="win95-button" title="Bounce the selected object(s) in place: bake what you see into a new sample">Bounce Object</button>
+          <select id="o-rate" class="win95-select" title="Sampling rate of the bounced sample. Lower = smaller in RAM and lo-fi (high frequencies are cut), like the resample function of an AKAI S-20.">
+            <option value="44100">44.1 kHz (full)</option>
+            <option value="32000">32 kHz</option>
+            <option value="22050">22.05 kHz</option>
+            <option value="16000">16 kHz</option>
+            <option value="11025">11.025 kHz</option>
+            <option value="8000">8 kHz</option>
+            <option value="4000">4 kHz (crunch)</option>
+          </select>
+        </fieldset>
+        <fieldset>
+          <legend>Readout</legend>
+          <span id="o-info" class="val">—</span>
+        </fieldset>
+      </div>
+
+      <div class="statusbar">
+        <div class="win95-inset cell" id="status">Drop a WAV/MP3 (or .smp project) anywhere or press Import Audio. SPACE = play/stop.</div>
+        <div class="win95-inset cell" id="lock">EDIT</div>
+      </div>
+    </div>
+
+    <div id="dialog-root"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
