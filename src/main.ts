@@ -542,7 +542,7 @@ store.subscribe(() => {
   }
 });
 
-(async () => {
+const restored = (async () => {
   persistent = await requestPersistence();
   try {
     const saved = await getAutosave();
@@ -567,3 +567,13 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
+
+// ---------- "Open with Digitrack 96" (installed app: WAV/MP3/.smp files handed over by the OS) ----------
+interface LaunchParams { files: { getFile(): Promise<File> }[] }
+const launchQueue = (window as unknown as { launchQueue?: { setConsumer(cb: (p: LaunchParams) => void): void } }).launchQueue;
+launchQueue?.setConsumer(async (params) => {
+  if (!params.files.length) return;
+  const files = await Promise.all(params.files.map((h) => h.getFile()));
+  await restored; // let the autosave restore finish first, or it would replace what was just opened
+  await loadFiles(files);
+});
