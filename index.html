@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Digitrack 96 — Boom-Bap Edition</title>
+    <title>Digitrack 96</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#c0c0c0" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -11,7 +11,7 @@
   </head>
   <body>
     <div id="app" class="win95-panel window">
-      <div class="titlebar"><span id="title">Digitrack 96 — Boom-Bap Edition</span><button id="btn-help" class="win95-button tb-btn" title="Help (F1)">?</button></div>
+      <div class="titlebar"><span id="title">Digitrack 96</span><button id="btn-help" class="win95-button tb-btn" title="Help (F1)">?</button></div>
 
       <div class="toolbar">
         <button id="btn-new" class="win95-button" title="Start a new, empty project">New…</button>
@@ -54,10 +54,10 @@
       </div>
 
       <div id="main">
-        <div id="headers"><div class="ruler-spacer"></div></div>
+        <div id="headers"><div class="hscroll-spacer"></div><div class="ruler-spacer"></div></div>
         <div id="canvas-col">
-          <div id="canvas-wrap"><canvas id="timeline"></canvas></div>
           <div id="hscroll" class="win95-inset" title="Scroll timeline"><div id="hscroll-inner"></div></div>
+          <div id="canvas-wrap"><canvas id="timeline"></canvas></div>
         </div>
       </div>
 

@@ -77,7 +77,7 @@ export function exportSelectedObjects(): number {
  * In-place bounce: renders the selected objects exactly as shown (trim, gain, fades, pitch/stretch,
  * reverse, swap, blend, resampling) into NEW 16-bit samples and swaps them in. Objects that are
  * identical (same sample + same render settings) are rendered ONCE and share the new sample, so copies
- * of a chop cost no extra RAM. Each object keeps its position, track and mute state; all its other
+ * of a snippet cost no extra RAM. Each object keeps its position, track and mute state; all its other
  * properties reset to neutral. An old sample is freed when nothing uses it any more.
  * Track settings (volume/pan/low-pass) are not baked in.
  */

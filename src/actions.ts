@@ -130,7 +130,7 @@ export function deleteSelected(): void {
   store.set({ objects, selectedIds: [], totalMemoryBytes: memory.total });
 }
 
-/** Split every selected object that straddles the playhead (chop!). */
+/** Split every selected object that straddles the playhead. */
 export function splitAtPlayhead(): void {
   const s = store.get();
   if (s.isPlaying) return;

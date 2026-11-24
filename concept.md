@@ -1,8 +1,8 @@
-Technical Specification: Digitrack 96, a Retro Web DAW (Boom-Bap Edition)
+Technical Specification: Digitrack 96, a Retro Web Wave Editor
 
 1. Overview & Core Philosophy
 
-A lightweight, web-based digital audio workstation (DAW) inspired by the hard-disk recording software of the mid-1990s, optimized specifically for 90s boom-bap sampling workflows. The application strictly enforces authentic hardware and UI constraints from 1996 to capture vintage sampler/DAW ergonomics and simplify the audio engine architecture.
+A lightweight, web-based digital audio workstation (DAW) inspired by the hard-disk recording software of the mid-1990s, built around hands-on, non-destructive sample editing. The application strictly enforces authentic hardware and UI constraints from 1996 to capture vintage sampler/DAW ergonomics and simplify the audio engine architecture.
 
 Key Constraints ("1996 Limitations")
 
@@ -119,7 +119,7 @@ Dirty Resampling (Zero-Order Hold / Nearest Neighbor):
 $$y[n] = x[\lfloor n \cdot \text{pitchRatio} \rfloor]$$
 
 
-Produces authentic 90s aliasing and grit when tuning down sample chops.
+Produces authentic 90s aliasing and grit when tuning samples down.
 
 Clean Resampling (Linear Interpolation):
 

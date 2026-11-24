@@ -1,7 +1,7 @@
 {
-  "name": "Digitrack 96 — Boom-Bap Edition",
+  "name": "Digitrack 96",
   "short_name": "Digitrack 96",
-  "description": "A 1996-style sample chopping DAW in the browser.",
+  "description": "A small four-track wave editor in the spirit of the pre-DAW era.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

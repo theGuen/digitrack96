@@ -84,7 +84,8 @@ html, body {
 .thead input[type=range] { flex: 1; min-width: 0; }
 #canvas-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 #canvas-wrap { flex: none; overflow: hidden; }
-#hscroll { overflow-x: scroll; overflow-y: hidden; height: 18px; margin-top: 2px; }
+#hscroll { overflow-x: scroll; overflow-y: hidden; height: 18px; flex: none; position: sticky; top: 0; z-index: 5; }
+.hscroll-spacer { height: 18px; position: sticky; top: 0; z-index: 5; background: var(--gray); }
 #hscroll-inner { height: 1px; }
 #hscroll::-webkit-scrollbar { height: 16px; }
 #hscroll::-webkit-scrollbar-track {

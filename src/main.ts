@@ -79,7 +79,7 @@ function confirmBox(title: string, message: string, okLabel = 'OK'): Promise<boo
 
 // ---------- song name ----------
 let songName = '';
-const APP_TITLE = 'Digitrack 96 — Boom-Bap Edition';
+const APP_TITLE = 'Digitrack 96';
 
 function cleanName(raw: string): string {
   // eslint-disable-next-line no-control-regex
@@ -89,7 +89,7 @@ function cleanName(raw: string): string {
 function setSongName(name: string): void {
   songName = name;
   $('title').textContent = name ? `${name} — ${APP_TITLE}` : APP_TITLE;
-  document.title = name ? `${name} — Digitrack 96` : 'Digitrack 96 — Boom-Bap Edition';
+  document.title = name ? `${name} — Digitrack 96` : 'Digitrack 96';
 }
 
 /** Win95 text prompt. Resolves with the entered text, or null if cancelled. */
@@ -435,7 +435,10 @@ function render(): void {
   Array.from(ramBar.children).forEach((c, i) => c.classList.toggle('lit', i < Math.ceil(frac * BLOCKS - 1e-9)));
 
   const playBtn = $('btn-play');
-  playBtn.textContent = s.isPlaying ? '■ Stop' : '▶ Play';
+  // Only touch the text when it changes: while playing, render() runs every frame, and replacing the button's
+  // text node between mouse-down and mouse-up makes Safari swallow the click.
+  const playLabel = s.isPlaying ? '■ Stop' : '▶ Play';
+  if (playBtn.textContent !== playLabel) playBtn.textContent = playLabel;
   playBtn.classList.toggle('active', s.isPlaying);
   $('main').classList.toggle('locked', s.isPlaying);
   $('lock').textContent = s.isPlaying ? 'LOCKED' : 'EDIT';
@@ -445,7 +448,7 @@ function render(): void {
   for (const id of ['btn-new', 'btn-open', 'btn-save', 'btn-load', 'btn-rec', 'btn-rew', 'btn-split', 'btn-dup', 'btn-del', 'btn-bounce', 'btn-optimize']) ($(id) as HTMLButtonElement).disabled = s.isPlaying;
 
   s.tracks.forEach((t, i) => {
-    const el = headers.children[i + 1];
+    const el = headers.children[i + 2];
     for (const [attr, v] of [['v', t.volume], ['p', t.pan], ['lp', Math.log(t.lowPassHz / 100) / Math.log(200)]] as const) {
       const inp = el.querySelector<HTMLInputElement>(`[data-${attr}]`)!;
       if (document.activeElement !== inp) inp.value = String(v);
