@@ -183,3 +183,5 @@ html, body {
 .fxknobs.two .fxknob { grid-template-columns: 78px 1fr 68px; }
 .fxcurve-wrap canvas { height: 170px; touch-action: none; }
 .fxcurve-wrap[hidden] { display: none; }
+
+.loop-ck { display: inline-flex; align-items: center; gap: 3px; margin: 0 4px; font-size: 11px; user-select: none; }

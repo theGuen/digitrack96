@@ -13,7 +13,7 @@ const HIT = 7;
 const BUCKET = 64;
 
 type HandleKind = 'fadeIn' | 'fadeOut' | 'gain' | 'trimIn' | 'trimOut' | 'stretch';
-type DragKind = HandleKind | 'move' | 'scrub' | 'marquee';
+type DragKind = HandleKind | 'move' | 'scrub' | 'marquee' | 'loopS' | 'loopE';
 
 interface Drag {
   kind: DragKind;
@@ -258,6 +258,25 @@ export class Timeline {
     this.drawRuler(W);
     g.restore();
 
+    // loop region (tint in the lanes; flags are drawn in the ruler)
+    const lp = s.loop;
+    if (lp.end > lp.start) {
+      const lx0 = this.t2x(lp.start);
+      const lx1 = this.t2x(lp.end);
+      g.fillStyle = lp.on ? 'rgba(60,160,255,0.10)' : 'rgba(160,160,160,0.05)';
+      g.fillRect(lx0, top + RULER_H, lx1 - lx0, H - top - RULER_H);
+      g.fillStyle = lp.on ? '#3ca0ff' : '#808080';
+      g.fillRect(Math.round(lx0), top + RULER_H, 1, H - top - RULER_H);
+      g.fillRect(Math.round(lx1), top + RULER_H, 1, H - top - RULER_H);
+      const c = g;
+      c.save();
+      c.translate(0, top);
+      c.fillRect(Math.round(lx0), RULER_H - 11, Math.max(0, Math.round(lx1) - Math.round(lx0)), 3); // ruler bar
+      c.beginPath(); c.moveTo(lx0, 1); c.lineTo(lx0 + 8, 1); c.lineTo(lx0, RULER_H - 9); c.fill(); // start flag
+      c.beginPath(); c.moveTo(lx1 + 1, 1); c.lineTo(lx1 - 7, 1); c.lineTo(lx1 + 1, RULER_H - 9); c.fill(); // end flag
+      c.restore();
+    }
+
     // playhead
     const px = this.t2x(s.playheadPosition);
     if (px >= 0 && px <= W) {
@@ -285,6 +304,18 @@ export class Timeline {
     for (let t = Math.floor(this.x2t(0) / step) * step; this.t2x(t) < W; t += step) {
       g.fillRect(Math.round(this.t2x(t)), RULER_H, 1, H - RULER_H);
     }
+  }
+
+  /** Called after a loop marker was dragged (main pushes it to the engine). */
+  onLoopChange: () => void = () => {};
+
+  private hitLoopMarker(x: number): 'loopS' | 'loopE' | null {
+    const l = store.get().loop;
+    if (l.end <= l.start) return null;
+    const ds = Math.abs(x - this.t2x(l.start));
+    const de = Math.abs(x - this.t2x(l.end));
+    if (Math.min(ds, de) > 7) return null;
+    return ds <= de ? 'loopS' : 'loopE';
   }
 
   private drawRuler(W: number): void {
@@ -510,6 +541,11 @@ export class Timeline {
     this.canvas.setPointerCapture(e.pointerId);
 
     if (y < this.top + RULER_H) {
+      const lm = this.hitLoopMarker(x);
+      if (lm) {
+        this.drag = { kind: lm, id: '', sx: x, sy: y, orig: null as unknown as AudioObject };
+        return;
+      }
       this.drag = { kind: 'scrub', id: '', sx: x, sy: y, orig: null as unknown as AudioObject };
       store.set({ playheadPosition: Math.max(0, this.x2t(x)) });
       return;
@@ -556,7 +592,7 @@ export class Timeline {
     const d = this.drag;
     if (!d) {
       const h = this.hitHandle(x, y);
-      this.canvas.style.cursor = h ? CURSORS[h.kind] : y < this.top + RULER_H ? 'col-resize' : this.hitObject(x, y) ? 'move' : 'default';
+      this.canvas.style.cursor = h ? CURSORS[h.kind] : y < this.top + RULER_H ? (this.hitLoopMarker(x) ? 'ew-resize' : 'col-resize') : this.hitObject(x, y) ? 'move' : 'default';
       return;
     }
     const dx = x - d.sx;
@@ -585,6 +621,15 @@ export class Timeline {
       case 'scrub':
         store.set({ playheadPosition: Math.max(0, this.x2t(x)) });
         break;
+      case 'loopS':
+      case 'loopE': {
+        const l = store.get().loop;
+        const t = Math.max(0, this.x2t(x));
+        const gap = 0.01;
+        store.set({ loop: d.kind === 'loopS' ? { ...l, start: Math.min(t, l.end - gap) } : { ...l, end: Math.max(t, l.start + gap) } });
+        this.onLoopChange();
+        break;
+      }
       case 'marquee': {
         if (!d.moved) break;
         this.marquee = { x0: d.sx, y0: d.sy, x1: x, y1: y };

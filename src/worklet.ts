@@ -12,6 +12,7 @@ class SamplerProcessor extends Base {
   private endFrame = 0;
   private mixer: Mixer | null = null;
   private sinceReport = 0;
+  private loop: { start: number; end: number } | null = null;
 
   constructor() {
     super();
@@ -22,10 +23,13 @@ class SamplerProcessor extends Base {
         this.mixer = new Mixer(p.objects, p.assets, p.tracks, p.master);
         this.frame = p.startFrame;
         this.endFrame = p.endFrame;
+        this.loop = p.loop;
         this.sinceReport = 0;
         this.playing = true;
       } else if (m.type === 'tracks') {
         this.mixer?.setTracks(m.tracks);
+      } else if (m.type === 'loop') {
+        this.loop = m.loop;
       } else if (m.type === 'master') {
         this.mixer?.setMaster(m.master);
       } else if (m.type === 'stop') {
@@ -42,13 +46,19 @@ class SamplerProcessor extends Base {
     if (!this.playing) return true;
 
     const n = L.length;
-    const f0 = this.frame;
-    const f1 = f0 + n;
-    this.mixer!.process(f0, L, R, n);
-
-    this.frame = f1;
+    let done = 0;
+    while (done < n) {
+      const lp = this.loop;
+      let chunk = n - done;
+      if (lp && this.frame < lp.end) chunk = Math.min(chunk, lp.end - this.frame);
+      this.mixer!.process(this.frame, L.subarray(done), R.subarray(done), chunk);
+      this.frame += chunk;
+      done += chunk;
+      if (lp && this.frame >= lp.end) this.frame = lp.start;
+    }
+    const f1 = this.frame;
     this.sinceReport += n;
-    if (f1 >= this.endFrame) {
+    if (!this.loop && f1 >= this.endFrame) {
       this.playing = false;
       this.port.postMessage({ type: 'ended', frame: this.endFrame });
     } else if (this.sinceReport >= POS_INTERVAL) {

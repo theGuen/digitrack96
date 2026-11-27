@@ -38,6 +38,7 @@ export const store = new Store<ProjectState>({
   maxMemoryBytes: MAX_MEMORY_BYTES,
   tracks: defaultTracks(),
   master: { ...DEFAULT_MASTER },
+  loop: { on: false, start: 0, end: 0 },
   objects: [],
   isPlaying: false,
   playheadPosition: 0,

@@ -9,7 +9,7 @@ import { planOptimize } from './optimize';
 import { showHelp } from './help';
 import { showRecorder } from './recorder';
 import { showFx } from './fxdialog';
-import { bounceSelectedInPlace, exportSelectedObjects } from './freeze';
+import { bounceSelectedInPlace, exportSelectedObjects, mergeSelected } from './freeze';
 import { loadProject, newProject, saveProject, ProjectError } from './project';
 import { record } from './history';
 import { canRedo, canUndo, redo, undo } from './history';
@@ -280,6 +280,22 @@ engine.onEnded = (pos) => {
 timeline.onLockedAttempt = () => status('LOCKED: editing is disabled during playback. Press SPACE to stop.');
 
 $('btn-play').onclick = () => void togglePlay();
+
+/** Loop: the blue markers in the ruler; the checkbox is live, even while playing. */
+timeline.onLoopChange = () => engine.updateLoop(store.get());
+($('loop-on') as HTMLInputElement).onchange = (e) => {
+  const s = store.get();
+  const on = (e.target as HTMLInputElement).checked;
+  let { start, end } = s.loop;
+  if (on && end - start < 0.01) {
+    // First use: from the playhead to the end of the material (at least 2 s).
+    const last = Math.max(0, ...s.objects.map((o) => o.startTime + o.duration));
+    start = s.playheadPosition >= last ? 0 : s.playheadPosition;
+    end = last > start + 0.01 ? last : start + 2;
+  }
+  store.set({ loop: { on, start, end } });
+  engine.updateLoop(store.get());
+};
 $('btn-rew').onclick = () => {
   if (store.get().isPlaying) return;
   store.set({ playheadPosition: 0 });
@@ -408,11 +424,27 @@ $('o-export').onclick = () => {
   if (n) status(`Exported ${n} object${n > 1 ? 's' : ''} as WAV (16-bit, 44.1 kHz). Project unchanged.`);
 };
 let lastSelKey = '';
-$('o-freeze').onclick = () => {
+$('o-freeze').onclick = async () => {
   try {
     const rate = Number(($('o-rate') as HTMLSelectElement).value);
     const rateTxt = rate < 44100 ? ` at ${rate / 1000} kHz` : '';
     const before = memory.total;
+    if (($('o-merge') as HTMLInputElement).checked && getSelected().length > 1) {
+      const tracks = new Set(getSelected().filter((o) => !o.isMuted).map((o) => o.trackId)).size;
+      if (tracks > 1) {
+        const ok = await confirmBox(
+          'Merge Objects',
+          `The selected objects are on ${tracks} different tracks.\nThey will be mixed into one sample on a single track (track volume, pan and filters are not baked in). This cannot be undone.`,
+          'Merge',
+        );
+        if (!ok) return;
+      }
+      const { merged } = mergeSelected(rate);
+      if (merged) {
+        status(`Merged ${merged} objects into one sample${rateTxt}${memory.total < before ? ` — freed ${mb(before - memory.total)} MB` : ''}. Gaps stay silent.`);
+        return;
+      }
+    }
     const { objects: n, samples } = bounceSelectedInPlace(rate);
     if (n) status(`Bounced ${n} object${n > 1 ? 's' : ''} in place into ${samples} sample${samples > 1 ? 's' : ''}${rateTxt}${memory.total < before ? ` — freed ${mb(before - memory.total)} MB` : ''}.`);
   } catch (err) {
@@ -447,6 +479,7 @@ function render(): void {
   $('main').classList.toggle('locked', s.isPlaying);
   $('lock').textContent = s.isPlaying ? 'LOCKED' : 'EDIT';
   $('lock').classList.toggle('locked', s.isPlaying);
+  ($('loop-on') as HTMLInputElement).checked = s.loop.on;
   ($('btn-fx') as HTMLButtonElement).disabled = s.isPlaying || !getPrimary(s);
   ($('btn-undo') as HTMLButtonElement).disabled = s.isPlaying || !canUndo();
   ($('btn-redo') as HTMLButtonElement).disabled = s.isPlaying || !canRedo();

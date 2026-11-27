@@ -37,6 +37,7 @@ export function newProject(): void {
   store.set({
     tracks: defaultTracks(),
     master: { ...DEFAULT_MASTER },
+    loop: { on: false, start: 0, end: 0 },
     objects: [],
     selectedIds: [],
     playheadPosition: 0,

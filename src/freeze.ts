@@ -160,3 +160,93 @@ export function bounceSelectedInPlace(rate: number = SAMPLE_RATE): { objects: nu
   }
   return { objects, samples };
 }
+
+/**
+ * Merge bounce: renders all selected (unmuted) objects, as shown, into ONE new 16-bit sample that spans
+ * from the earliest start to the latest end. Gaps stay silent, overlaps are summed. The merged object sits
+ * on the first selected object's track. Track settings (volume/pan/filters) are not baked in.
+ */
+export function mergeSelected(rate: number = SAMPLE_RATE): { merged: number } {
+  const s = store.get();
+  if (s.isPlaying) return { merged: 0 };
+  const sel = getSelected().filter((o) => !o.isMuted && memory.get(o.assetId));
+  if (sel.length < 2) return { merged: 0 };
+
+  const t0 = Math.min(...sel.map((o) => o.startTime));
+  const t1 = Math.max(...sel.map((o) => o.startTime + o.duration));
+  const full = Math.max(1, Math.round((t1 - t0) * SAMPLE_RATE));
+  const len = rate >= SAMPLE_RATE ? full : Math.max(1, Math.ceil((full * rate) / SAMPLE_RATE));
+  const channels = sel.some((o) => memory.get(o.assetId)!.buffer.numberOfChannels > 1) ? 2 : 1;
+  const newBytes = MemoryManager.bytesFor(len, channels);
+
+  // Samples that nothing outside the merged set uses get freed.
+  const ids = new Set(sel.map((o) => o.id));
+  const stillUsed = new Set(s.objects.filter((x) => !ids.has(x.id)).map((x) => x.assetId));
+  let freed = 0;
+  for (const a of new Set(sel.map((o) => o.assetId))) if (!stillUsed.has(a)) freed += memory.get(a)!.byteSize;
+  if (memory.total - freed + newBytes > MAX_MEMORY_BYTES) {
+    throw new MemoryError(
+      `Not enough memory to merge ${sel.length} objects.\n` +
+        `The new sample needs ${mb(newBytes)} MB, only ${mb(MAX_MEMORY_BYTES - memory.total + freed)} MB would be free.`,
+    );
+  }
+
+  const L = new Float32Array(full);
+  const R = new Float32Array(full);
+  for (const o of sel) {
+    const r = renderObject(o, memory.get(o.assetId)!);
+    const at = Math.round((o.startTime - t0) * SAMPLE_RATE);
+    const right = r[1] ?? r[0];
+    for (let i = 0; i < r[0].length && at + i < full; i++) {
+      L[at + i] += r[0][i];
+      R[at + i] += right[i];
+    }
+  }
+  const data = [L, R].slice(0, channels).map((d) => downsample(d, rate));
+  const buffer = getContext().createBuffer(channels, len, SAMPLE_RATE);
+  for (const [c, d] of data.entries()) {
+    for (let i = 0; i < len; i++) {
+      const v = d[i] > 1 ? 1 : d[i] < -1 ? -1 : d[i];
+      d[i] = Math.round(v * 32767) / 32767; // 16-bit
+    }
+    buffer.copyToChannel(d, c);
+  }
+
+  const first = sel[0];
+  const asset: AudioAsset = {
+    id: crypto.randomUUID(),
+    name: `merged ${sel.length} objects` + (rate < SAMPLE_RATE ? ` [${rate / 1000} kHz]` : ''),
+    buffer,
+    byteSize: newBytes,
+    rate: Math.min(rate, SAMPLE_RATE),
+  };
+  const obj: AudioObject = {
+    ...first,
+    id: crypto.randomUUID(),
+    assetId: asset.id,
+    startTime: t0,
+    trimStart: 0,
+    duration: full / SAMPLE_RATE,
+    gain: 1,
+    fadeInTime: 0,
+    fadeOutTime: 0,
+    fadeInCurve: 0,
+    fadeOutCurve: 0,
+    pitchShiftCents: 0,
+    resampleMode: rate < SAMPLE_RATE ? 'nearest' : 'linear',
+    reverse: false,
+    swap: false,
+    isMuted: false,
+    pan: 0,
+  };
+  memory.add(asset);
+  for (const a of new Set(sel.map((o) => o.assetId))) if (!stillUsed.has(a)) memory.remove(a);
+
+  clearHistory();
+  store.set({
+    objects: [...s.objects.filter((x) => !ids.has(x.id)), obj],
+    selectedIds: [obj.id],
+    totalMemoryBytes: memory.total,
+  });
+  return { merged: sel.length };
+}

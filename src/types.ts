@@ -46,7 +46,14 @@ export interface MasterSettings {
   mix: number; // 0..1 parallel blend (1 = fully compressed)
 }
 
+export interface LoopSettings {
+  on: boolean;
+  start: number; // seconds
+  end: number; // seconds
+}
+
 export interface ProjectState {
+  loop: LoopSettings;
   master: MasterSettings;
   sampleRate: number;
   totalMemoryBytes: number;
@@ -89,6 +96,7 @@ export interface PlaybackPayload {
   type: 'start';
   startFrame: number;
   endFrame: number;
+  loop: { start: number; end: number } | null; // frames; null = play through once
   tracks: PlaybackTrack[];
   master: MasterSettings;
   assets: Float32Array[][]; // [asset][channel]

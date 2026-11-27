@@ -45,6 +45,13 @@ export function playbackObjectFor(o: AudioObject, assetIdx: number, trackIdx: nu
 }
 
 /** Resolve everything (fades, trims, mute/solo, pan) once, before playback starts. */
+export function loopFrames(s: ProjectState): { start: number; end: number } | null {
+  const l = s.loop;
+  const start = Math.round(l.start * SAMPLE_RATE);
+  const end = Math.round(l.end * SAMPLE_RATE);
+  return l.on && end - start >= 64 ? { start, end } : null;
+}
+
 export function buildPayload(s: ProjectState, fromStart = false): PlaybackPayload | null {
   const sr = SAMPLE_RATE;
   const assetIndex = new Map<string, number>();
@@ -75,9 +82,11 @@ export function buildPayload(s: ProjectState, fromStart = false): PlaybackPayloa
     objects.push(playbackObjectFor(o, idx, s.tracks.indexOf(track), asset.rate));
   }
 
-  const startFrame = fromStart ? 0 : Math.round(s.playheadPosition * sr);
-  if (!objects.length || startFrame >= endFrame) return null;
-  return { type: 'start', startFrame, endFrame, tracks: buildTrackParams(s), master: { ...s.master }, assets, objects };
+  const loop = loopFrames(s);
+  let startFrame = fromStart ? 0 : Math.round(s.playheadPosition * sr);
+  if (loop && startFrame >= loop.end) startFrame = loop.start;
+  if (!objects.length || (!loop && startFrame >= endFrame)) return null;
+  return { type: 'start', startFrame, endFrame, loop, tracks: buildTrackParams(s), master: { ...s.master }, assets, objects };
 }
 
 export class Engine {
@@ -85,6 +94,7 @@ export class Engine {
   private lastFrame = 0;
   private lastCtxTime = 0;
   private playing = false;
+  private loop: { start: number; end: number } | null = null;
   onEnded: (position: number) => void = () => {};
 
   private async init(): Promise<AudioWorkletNode> {
@@ -111,6 +121,7 @@ export class Engine {
     if (!payload) return false;
     const node = await this.init();
     await getContext().resume();
+    this.loop = payload.loop;
     this.lastFrame = payload.startFrame;
     this.lastCtxTime = getContext().currentTime;
     this.playing = true;
@@ -121,6 +132,12 @@ export class Engine {
   /** Push live mixer changes (volume/pan/mute/solo/low-pass) to the running worklet. */
   updateTracks(s: ProjectState): void {
     if (this.playing) this.node?.port.postMessage({ type: 'tracks', tracks: buildTrackParams(s) });
+  }
+
+  /** Push loop on/off or moved markers to the running worklet. */
+  updateLoop(s: ProjectState): void {
+    this.loop = loopFrames(s);
+    if (this.playing) this.node?.port.postMessage({ type: 'loop', loop: this.loop });
   }
 
   /** Push live master-strip changes to the running worklet. */
@@ -139,7 +156,10 @@ export class Engine {
   getPosition(): number {
     const c = getContext();
     const extra = this.playing ? c.currentTime - this.lastCtxTime : 0;
-    return this.lastFrame / SAMPLE_RATE + extra;
+    let f = this.lastFrame + extra * SAMPLE_RATE;
+    const l = this.loop;
+    if (this.playing && l && f >= l.end) f = l.start + ((f - l.start) % (l.end - l.start));
+    return f / SAMPLE_RATE;
   }
 }
 

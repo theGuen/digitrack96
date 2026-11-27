@@ -30,6 +30,7 @@ const HTML = `
   <li>Drag an object to move it, also to another track. <b>Shift/Ctrl/Cmd-click</b> adds or removes objects from the selection.</li>
   <li>Drag on empty space to draw a selection box. <b>Ctrl/Cmd+A</b> selects everything. Click empty space to deselect and place the playhead; click the ruler to move the playhead.</li>
   <li><b>Snap</b> pulls edges to other objects, the playhead and 0. Hold <b>Alt</b> to ignore it for one drag. There is no grid, by design.</li>
+  <li><b>Loop</b> repeats a region while playing. Tick the box and two blue markers appear in the ruler (first time: playhead to end of material). Drag a marker to move it; the box can be switched live while playing.</li>
   <li>While playing, editing is <b>locked</b> (1996 rules). Press <b>Space</b> to stop. The track sliders (volume, pan, low-pass, mute, solo) stay live.</li>
 </ul>
 
@@ -49,6 +50,7 @@ const HTML = `
   <li><b>Pan</b> is a channel blend: L 100 puts the left channel on both sides and removes the right one's own signal; L 25 mixes 25 % of the left over the right. It does nothing to mono samples.</li>
   <li><b>Reverse</b>, <b>Swap L/R</b>, <b>Mute</b> work on the whole selection.</li>
   <li><b>Select Identical</b> finds exact copies. <b>Bounce Object</b> bakes what you see into a new sample (identical copies share one). <b>Export Object WAV</b> downloads the object, the project stays unchanged.</li>
+  <li>Tick <b>Merge</b> next to Bounce Object to bake all selected objects into a single sample: gaps between them stay silent, overlaps are summed, muted objects are left out. The result sits on the first selected object's track.</li>
   <li><b>FX…</b> applies an effect to the selected object(s) and renders a new sample: Reverb, Delay, Phaser, Vinyl, Multicomp or a drawable Spline EQ. Pick the effect, set up to four values, press <b>Preview</b> (the waveform shows the result, tails included) and <b>Apply</b> to swap the new sample in. Reverb and echo tails make the object longer. Like Bounce Object, it can't be undone.</li>
   <li>The dropdown next to <b>Bounce Object</b> sets the sampling rate of the new sample. Lower rates (11 kHz, 8 kHz, 4 kHz) cut the highs and add grit, and they save memory. It follows the rate of the selected object.</li>
 </ul>
