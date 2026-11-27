@@ -55,6 +55,19 @@ export function lowPassCoefs(hz: number, sampleRate: number, q = 0.9): number[] 
   return [b1 / 2, b1, b1 / 2, (-2 * cos) / a0, (1 - alpha) / a0];
 }
 
+export const HP_OFF_HZ = 20;
+
+/** RBJ high-pass biquad coefficients [b0,b1,b2,a1,a2]; null when the filter is off. */
+export function highPassCoefs(hz: number, sampleRate: number, q = 0.9): number[] | null {
+  if (hz <= HP_OFF_HZ) return null;
+  const w0 = (2 * Math.PI * Math.min(hz, sampleRate * 0.45)) / sampleRate;
+  const cos = Math.cos(w0);
+  const alpha = Math.sin(w0) / (2 * q);
+  const a0 = 1 + alpha;
+  const b1 = -(1 + cos) / a0;
+  return [-b1 / 2, b1, -b1 / 2, (-2 * cos) / a0, (1 - alpha) / a0];
+}
+
 export function mixObject(
   o: PlaybackObject,
   src: Float32Array[],
@@ -180,7 +193,7 @@ export class MasterComp {
 export class Mixer {
   private busL: Float32Array[] = [];
   private busR: Float32Array[] = [];
-  private z: Float64Array[]; // per track: [zL1, zL2, zR1, zR2]
+  private z: Float64Array[]; // per track: low-pass [zL1, zL2, zR1, zR2], then high-pass [4..7]
   private curL: Float64Array;
   private curR: Float64Array;
   private master = new MasterComp();
@@ -192,7 +205,7 @@ export class Mixer {
     master?: MasterSettings,
   ) {
     if (master) this.master.set(master);
-    this.z = tracks.map(() => new Float64Array(4));
+    this.z = tracks.map(() => new Float64Array(8));
     this.curL = Float64Array.from(tracks, (t) => t.gL);
     this.curR = Float64Array.from(tracks, (t) => t.gR);
   }
@@ -204,7 +217,8 @@ export class Mixer {
   setTracks(tracks: PlaybackTrack[]): void {
     if (tracks.length !== this.tracks.length) return;
     this.tracks.forEach((old, i) => {
-      if (!old.lp && tracks[i].lp) this.z[i].fill(0); // filter switching on: start clean
+      if (!old.lp && tracks[i].lp) this.z[i].fill(0, 0, 4); // filter switching on: start clean
+      if (!old.hp && tracks[i].hp) this.z[i].fill(0, 4, 8);
     });
     this.tracks = tracks;
   }
@@ -213,7 +227,7 @@ export class Mixer {
   process(f0: number, L: Float32Array, R: Float32Array, n: number): void {
     const f1 = f0 + n;
     for (let t = 0; t < this.tracks.length; t++) {
-      const { lp: c, gL: tL, gR: tR } = this.tracks[t];
+      const { lp: c, hp: h, gL: tL, gR: tR } = this.tracks[t];
       if (this.curL[t] === 0 && this.curR[t] === 0 && tL === 0 && tR === 0) continue; // silent track
 
       if (!this.busL[t] || this.busL[t].length < n) {
@@ -225,6 +239,18 @@ export class Mixer {
       br.fill(0, 0, n);
       for (const o of this.objects) {
         if (o.track === t) mixObject(o, this.assets[o.asset], f0, f1, bl, br);
+      }
+
+      if (h) {
+        const [b0, b1, b2, a1, a2] = h;
+        const z = this.z[t];
+        let l1 = z[4], l2 = z[5], r1 = z[6], r2 = z[7];
+        for (let k = 0; k < n; k++) {
+          const xl = bl[k], xr = br[k];
+          const yl = b0 * xl + l1; l1 = b1 * xl - a1 * yl + l2; l2 = b2 * xl - a2 * yl; bl[k] = yl;
+          const yr = b0 * xr + r1; r1 = b1 * xr - a1 * yr + r2; r2 = b2 * xr - a2 * yr; br[k] = yr;
+        }
+        z[4] = l1; z[5] = l2; z[6] = r1; z[7] = r2;
       }
 
       if (c) {

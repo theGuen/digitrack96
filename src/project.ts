@@ -145,6 +145,7 @@ export async function loadProject(file: File): Promise<void> {
           isMuted: !!s.isMuted,
           isSoloed: !!s.isSoloed,
           lowPassHz: Math.min(20000, Math.max(100, num(s.lowPassHz, 20000))),
+          highPassHz: Math.min(4000, Math.max(20, num(s.highPassHz, 20))),
         }
       : t;
   });

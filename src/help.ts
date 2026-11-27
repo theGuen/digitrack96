@@ -49,6 +49,7 @@ const HTML = `
   <li><b>Pan</b> is a channel blend: L 100 puts the left channel on both sides and removes the right one's own signal; L 25 mixes 25 % of the left over the right. It does nothing to mono samples.</li>
   <li><b>Reverse</b>, <b>Swap L/R</b>, <b>Mute</b> work on the whole selection.</li>
   <li><b>Select Identical</b> finds exact copies. <b>Bounce Object</b> bakes what you see into a new sample (identical copies share one). <b>Export Object WAV</b> downloads the object, the project stays unchanged.</li>
+  <li><b>FX…</b> applies an effect to the selected object(s) and renders a new sample: Reverb, Delay, Phaser, Vinyl, Multicomp or a drawable Spline EQ. Pick the effect, set up to four values, press <b>Preview</b> (the waveform shows the result, tails included) and <b>Apply</b> to swap the new sample in. Reverb and echo tails make the object longer. Like Bounce Object, it can't be undone.</li>
   <li>The dropdown next to <b>Bounce Object</b> sets the sampling rate of the new sample. Lower rates (11 kHz, 8 kHz, 4 kHz) cut the highs and add grit, and they save memory. It follows the rate of the selected object.</li>
 </ul>
 

@@ -25,6 +25,7 @@ const mkTrack = (i: number, name: string): Track => ({
   isMuted: false,
   isSoloed: false,
   lowPassHz: 20000,
+  highPassHz: 20,
 });
 
 export const DEFAULT_MASTER = { on: false, comp: 0.4, mix: 1 };

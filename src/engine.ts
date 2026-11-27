@@ -1,5 +1,5 @@
 import workletUrl from './worklet.ts?worker&url';
-import { centsToRatio, lowPassCoefs } from './dsp';
+import { centsToRatio, highPassCoefs, lowPassCoefs } from './dsp';
 import { memory } from './memory';
 import { AudioObject, PlaybackObject, PlaybackPayload, PlaybackTrack, ProjectState, SAMPLE_RATE } from './types';
 
@@ -18,7 +18,7 @@ export function buildTrackParams(s: ProjectState): PlaybackTrack[] {
     const panL = t.pan <= 0 ? 1 : 1 - t.pan;
     const panR = t.pan >= 0 ? 1 : 1 + t.pan;
     const v = audible ? t.volume : 0;
-    return { lp: lowPassCoefs(t.lowPassHz, SAMPLE_RATE), gL: v * panL, gR: v * panR };
+    return { lp: lowPassCoefs(t.lowPassHz, SAMPLE_RATE), hp: highPassCoefs(t.highPassHz, SAMPLE_RATE), gL: v * panL, gR: v * panR };
   });
 }
 

@@ -23,6 +23,7 @@ It is not meant to master your next mixtape. It is a small tool for re-evaluatin
 - **Undo** for every non-destructive edit.
 - **Bounce Object** renders what you see into a new sample. A sampling-rate choice (44.1 kHz down to 4 kHz) lets you trade fidelity for memory, or add some grit on purpose.
 - **Optimize** merges duplicate samples and crops audio nobody uses, with a preview first.
+- **FX** renders an effect into a new sample: reverb, delay, phaser, vinyl, a multiband compressor and a spline EQ you draw as a curve, with a preview. The effects are written in [Faust](https://faust.grame.fr) (`fx/*.dsp`) and compiled to WebAssembly with `scripts/build-fx.sh`; the compiled files are committed, so building the app needs no Faust.
 - **Record** from any input (microphone, audio interface, a phone used as a sound card), with a live waveform, monitoring, preview and auto-trim.
 - **Master Glue**, a single-knob compressor with a parallel mix.
 - **Export Audio** and **Export Object WAV** write 16-bit WAV files.

@@ -8,6 +8,7 @@ import { bounceToWav } from './bounce';
 import { planOptimize } from './optimize';
 import { showHelp } from './help';
 import { showRecorder } from './recorder';
+import { showFx } from './fxdialog';
 import { bounceSelectedInPlace, exportSelectedObjects } from './freeze';
 import { loadProject, newProject, saveProject, ProjectError } from './project';
 import { record } from './history';
@@ -145,13 +146,14 @@ for (const t of store.get().tracks) {
   const el = document.createElement('div');
   el.className = 'thead win95-panel';
   el.innerHTML = `
-    <div class="name"><span>${t.name}</span><small data-lpv="${t.id}">LP off</small></div>
+    <div class="name"><span>${t.name}</span><small data-lpv="${t.id}">filters off</small></div>
     <div class="row">
       <button class="win95-button small" data-m="${t.id}">M</button>
       <button class="win95-button small" data-s="${t.id}">S</button>
     </div>
     <div class="row"><label>Vol</label><input type="range" min="0" max="1" step="0.01" value="${t.volume}" data-v="${t.id}"></div>
     <div class="row"><label>Pan</label><input type="range" min="-1" max="1" step="0.01" value="${t.pan}" data-p="${t.id}"></div>
+    <div class="row"><label>HP</label><input type="range" min="0" max="1" step="0.005" value="0" data-hp="${t.id}" title="High-pass cutoff (left = off)"></div>
     <div class="row"><label>LP</label><input type="range" min="0" max="1" step="0.005" value="1" data-lp="${t.id}" title="Low-pass cutoff (right = off)"></div>`;
   headers.appendChild(el);
 }
@@ -165,6 +167,7 @@ headers.addEventListener('input', (e) => {
   const i = e.target as HTMLInputElement;
   if (i.dataset.v) updateTrack(i.dataset.v, { volume: +i.value });
   if (i.dataset.p) updateTrack(i.dataset.p, { pan: +i.value });
+  if (i.dataset.hp) updateTrack(i.dataset.hp, { highPassHz: Math.round(20 * Math.pow(200, +i.value)) });
   if (i.dataset.lp) updateTrack(i.dataset.lp, { lowPassHz: Math.round(100 * Math.pow(200, +i.value)) });
 });
 
@@ -310,6 +313,7 @@ $('btn-optimize').onclick = async () => {
 };
 $('btn-help').onclick = showHelp;
 $('btn-rec').onclick = showRecorder;
+$('btn-fx').onclick = () => showFx((m) => status(m));
 $('btn-undo').onclick = undo;
 $('btn-redo').onclick = redo;
 $('btn-dup').onclick = duplicateSelected;
@@ -443,18 +447,21 @@ function render(): void {
   $('main').classList.toggle('locked', s.isPlaying);
   $('lock').textContent = s.isPlaying ? 'LOCKED' : 'EDIT';
   $('lock').classList.toggle('locked', s.isPlaying);
+  ($('btn-fx') as HTMLButtonElement).disabled = s.isPlaying || !getPrimary(s);
   ($('btn-undo') as HTMLButtonElement).disabled = s.isPlaying || !canUndo();
   ($('btn-redo') as HTMLButtonElement).disabled = s.isPlaying || !canRedo();
   for (const id of ['btn-new', 'btn-open', 'btn-save', 'btn-load', 'btn-rec', 'btn-rew', 'btn-split', 'btn-dup', 'btn-del', 'btn-bounce', 'btn-optimize']) ($(id) as HTMLButtonElement).disabled = s.isPlaying;
 
   s.tracks.forEach((t, i) => {
     const el = headers.children[i + 2];
-    for (const [attr, v] of [['v', t.volume], ['p', t.pan], ['lp', Math.log(t.lowPassHz / 100) / Math.log(200)]] as const) {
+    for (const [attr, v] of [['v', t.volume], ['p', t.pan], ['hp', Math.log(t.highPassHz / 20) / Math.log(200)], ['lp', Math.log(t.lowPassHz / 100) / Math.log(200)]] as const) {
       const inp = el.querySelector<HTMLInputElement>(`[data-${attr}]`)!;
       if (document.activeElement !== inp) inp.value = String(v);
     }
+    const hz = (v: number) => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v));
     el.querySelector<HTMLElement>('[data-lpv]')!.textContent =
-      t.lowPassHz >= 20000 ? 'LP off' : `LP ${t.lowPassHz >= 1000 ? (t.lowPassHz / 1000).toFixed(1) + 'k' : t.lowPassHz}`;
+      [t.highPassHz > 20 ? `HP ${hz(t.highPassHz)}` : '', t.lowPassHz < 20000 ? `LP ${hz(t.lowPassHz)}` : ''].filter(Boolean).join(' ') ||
+      'filters off';
     el.querySelector<HTMLElement>('[data-m]')!.classList.toggle('on', t.isMuted);
     el.querySelector<HTMLElement>('[data-s]')!.classList.toggle('on', t.isSoloed);
   });

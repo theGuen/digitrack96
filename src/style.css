@@ -72,9 +72,9 @@ html, body {
 
 #main { flex: 1; display: flex; overflow: auto; margin: 3px; background: var(--dark); }
 #headers { width: 170px; flex: none; background: var(--gray); }
-.ruler-spacer { height: 24px; border-bottom: 1px solid var(--black); }
+.ruler-spacer { height: 24px; border-bottom: 1px solid var(--black); position: sticky; top: 18px; z-index: 4; background: var(--gray); }
 .thead {
-  height: 130px; padding: 5px 6px; border-bottom: 1px solid var(--white);
+  height: 154px; padding: 5px 6px; border-bottom: 1px solid var(--white);
   border-top: 1px solid var(--black); display: grid; gap: 4px; align-content: start;
 }
 .thead .name { font-weight: bold; display: flex; justify-content: space-between; }
@@ -174,3 +174,12 @@ html, body {
 .rec-time { font-family: "Courier New", monospace; min-width: 60px; text-align: right; }
 .rec-msg { min-height: 1.3em; }
 .dialog.rec .actions { gap: 6px; padding: 4px 0 8px; }
+
+.dialog.fx { width: min(640px, 96vw); }
+.fxknobs { display: grid; gap: 6px; }
+.fxknob { display: grid; grid-template-columns: 90px 1fr 80px; gap: 8px; align-items: center; }
+.fxknob output { font: 11px "Courier New", monospace; }
+.fxknobs.two { grid-template-columns: 1fr 1fr; column-gap: 20px; }
+.fxknobs.two .fxknob { grid-template-columns: 78px 1fr 68px; }
+.fxcurve-wrap canvas { height: 170px; touch-action: none; }
+.fxcurve-wrap[hidden] { display: none; }

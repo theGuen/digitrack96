@@ -6,7 +6,7 @@ import { record } from './history';
 import { MIN_DURATION, getPrimary, maxDuration, patchObjects, updateObject } from './actions';
 
 export const RULER_H = 24;
-export const TRACK_H = 130;
+export const TRACK_H = 154;
 const PAD = 4;
 const HS = 8; // handle size
 const HIT = 7;
@@ -59,8 +59,17 @@ export class Timeline {
   onLockedAttempt: () => void = () => {};
   onView: () => void = () => {}; // called after every draw so the scrollbar can follow
 
+  /** The vertically scrolling container: the ruler is drawn at its scroll offset so the lanes pass under it. */
+  private scroller: HTMLElement | null;
+
+  private get top(): number {
+    return Math.max(0, this.scroller?.scrollTop ?? 0);
+  }
+
   constructor(private canvas: HTMLCanvasElement, private wrap: HTMLElement) {
     this.g = canvas.getContext('2d')!;
+    this.scroller = wrap.closest<HTMLElement>('#main');
+    this.scroller?.addEventListener('scroll', () => this.draw());
     new ResizeObserver(() => this.resize()).observe(wrap);
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     canvas.addEventListener('pointermove', (e) => this.onMove(e));
@@ -243,7 +252,11 @@ export class Timeline {
       g.stroke();
       g.restore();
     }
+    const top = this.top;
+    g.save();
+    g.translate(0, top);
     this.drawRuler(W);
+    g.restore();
 
     // playhead
     const px = this.t2x(s.playheadPosition);
@@ -251,7 +264,7 @@ export class Timeline {
       g.fillStyle = '#ff2a2a';
       g.fillRect(Math.round(px), 0, 1, H);
       g.beginPath();
-      g.moveTo(px - 5, 0); g.lineTo(px + 6, 0); g.lineTo(px + 0.5, 9);
+      g.moveTo(px - 5, top); g.lineTo(px + 6, top); g.lineTo(px + 0.5, top + 9);
       g.fill();
     }
     if (s.isPlaying && (px > W - 40 || px < 0)) {
@@ -496,7 +509,7 @@ export class Timeline {
     }
     this.canvas.setPointerCapture(e.pointerId);
 
-    if (y < RULER_H) {
+    if (y < this.top + RULER_H) {
       this.drag = { kind: 'scrub', id: '', sx: x, sy: y, orig: null as unknown as AudioObject };
       store.set({ playheadPosition: Math.max(0, this.x2t(x)) });
       return;
@@ -543,7 +556,7 @@ export class Timeline {
     const d = this.drag;
     if (!d) {
       const h = this.hitHandle(x, y);
-      this.canvas.style.cursor = h ? CURSORS[h.kind] : y < RULER_H ? 'col-resize' : this.hitObject(x, y) ? 'move' : 'default';
+      this.canvas.style.cursor = h ? CURSORS[h.kind] : y < this.top + RULER_H ? 'col-resize' : this.hitObject(x, y) ? 'move' : 'default';
       return;
     }
     const dx = x - d.sx;

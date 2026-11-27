@@ -37,6 +37,7 @@ export interface Track {
   isMuted: boolean;
   isSoloed: boolean;
   lowPassHz: number; // 20000 = filter off
+  highPassHz: number; // 20 = filter off
 }
 
 export interface MasterSettings {
@@ -79,6 +80,7 @@ export interface PlaybackObject {
 /** Live mixer parameters for one track (changeable during playback). */
 export interface PlaybackTrack {
   lp: number[] | null; // biquad [b0,b1,b2,a1,a2], null = bypass
+  hp: number[] | null; // same, high-pass
   gL: number; // volume * pan * mute/solo resolved
   gR: number;
 }
